@@ -8,10 +8,10 @@ spec:
   ingressClassName: traefik
   tls:
   - hosts:
-    - nginx.vaclab.diarra.tech
+    - new-nginx.vaclab.diarra.tech
     secretName: nginx-tls
   rules:
-  - host: nginx.vaclab.diarra.tech
+  - host: new-nginx.vaclab.diarra.tech
     http:
       paths:
       - path: /
