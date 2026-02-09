@@ -1,43 +1,26 @@
 # Rancher Fleet Hands-On Tutorial
 
-A Quick tutorial on how to manage a Kubernetes cluster with Rancher Fleet.
-
-## Overview
-
-This hands-on session covers:
-- Installing Fleet via Helm
-- Creating GitRepo objects to watch and apply manifests
-- Setting up Fleet bundles and fleet.yaml configurations
-- Managing deployments through Git
-- Observing Fleet's reconciliation behavior
+A practical guide to managing Kubernetes clusters with Rancher Fleet.
 
 ## Prerequisites
 
-- A Kubernetes cluster (v1.21+)
-- `kubectl` configured and connected to your cluster
-- `helm` CLI installed
+- Kubernetes cluster (v1.21+)
+- `kubectl` and `helm` CLI installed
 - Git repository access
 
-## Part 1: Install Fleet
-
-Install Fleet using the Helm chart:
+## Step 1: Install Fleet
 
 ```bash
 helm repo add fleet https://rancher.github.io/fleet-helm-charts/
 helm repo update
 helm install fleet-crd fleet/fleet-crd -n cattle-fleet-system --create-namespace
 helm install fleet fleet/fleet -n cattle-fleet-system
-```
-
-Verify installation:
-
-```bash
 kubectl get pods -n cattle-fleet-system
 ```
 
-## Part 2: Create Fleet GitRepo
+## Step 2: Create Fleet GitRepo
 
-Create a GitRepo resource to watch this repository:
+Create and apply `gitrepo.yaml`:
 
 ```yaml
 apiVersion: fleet.cattle.io/v1alpha1
@@ -46,195 +29,72 @@ metadata:
   name: fleet-tutorial
   namespace: fleet-local
 spec:
-  repo: https://github.com/<your-username>/rancher-fleet-tuto
+  repo: https://github.com/mamoutou-diarra/rancher-fleet-tuto
   branch: main
   paths:
   - manifests
 ```
 
-Apply it:
-
 ```bash
 kubectl apply -f gitrepo.yaml
-```
-
-Check status:
-
-```bash
 kubectl get gitrepo -n fleet-local
 kubectl get bundles -n fleet-local
 ```
 
-## Part 3: Repository Structure
+## Step 3: Repository Structure
 
-Organize your manifests in the following structure:
+The `manifests/` directory contains Fleet bundles:
 
-```
-manifests/
-├── nginx-deployment/
-│   ├── deployment.yaml
-│   └── fleet.yaml
-├── nginx-service/
-│   ├── service.yaml
-│   └── fleet.yaml
-├── nginx-ingress/
-│   ├── ingress.yaml
-│   └── fleet.yaml
-└── cert-manager/
-    └── fleet.yaml
-```
+- **nginx/** - Nginx deployment (1 replica) with `correctDrift` enabled
+- **nginx-service/** - ClusterIP service for Nginx
+- **nginx-ingress/** - Ingress for nginx
+- **cert-manager/** - Helm chart deployment (cert-manager v1.13.3)
 
-Each `fleet.yaml` defines how the bundle should be created and huw it should run (precedence tree):
+Each directory has a `fleet.yaml` defining deployment configuration.
 
+**Note:** The nginx bundle has `correctDrift: enabled: true` in its `fleet.yaml`, enabling automatic reconciliation when local changes are detected.
 
-## Part 4: Deploy and Update Workloads
+## Step 4: Watch Fleet Sync
 
-### Example 1: Nginx with Service and Ingress
-
-Create `manifests/nginx-deployment/deployment.yaml`:
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: nginx
-  template:
-    metadata:
-      labels:
-        app: nginx
-    spec:
-      containers:
-      - name: nginx
-        image: nginx:1.21
-        ports:
-        - containerPort: 80
-```
-
-Create `manifests/nginx-deployment/fleet.yaml`:
-
-```yaml
-namespace: default
-```
-
-Create `manifests/nginx-service/service.yaml`:
-
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx
-spec:
-  selector:
-    app: nginx
-  ports:
-  - port: 80
-    targetPort: 80
-  type: ClusterIP
-```
-
-Create `manifests/nginx-service/fleet.yaml`:
-
-```yaml
-namespace: default
-```
-
-Create `manifests/nginx-ingress/ingress.yaml`:
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: nginx
-spec:
-  rules:
-  - host: nginx.example.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: nginx
-            port:
-              number: 80
-```
-
-Create `manifests/nginx-ingress/fleet.yaml`:
-
-```yaml
-namespace: default
-```
-
-### Example 2: Deploying Helm Charts with Fleet
-
-Fleet can deploy Helm charts directly. Create `manifests/cert-manager/fleet.yaml`:
-
-```yaml
-namespace: cert-manager
-helm:
-  chart: cert-manager
-  repo: https://charts.jetstack.io
-  version: v1.13.3
-  releaseName: cert-manager
-  values:
-    installCRDs: true
-```
-
-This deploys the cert-manager Helm chart without needing to store any Kubernetes manifests in your repository.
-
-Commit and push:
-
-```bash
-git add manifests/
-git commit -m "Add nginx and cert-manager deployments"
-git push
-```
-
-Watch Fleet sync the changes:
+Fleet automatically syncs changes from Git:
 
 ```bash
 kubectl get bundles -n fleet-local -w
-kubectl get deployments -n default
+kubectl get deployments -n nginx
+kubectl get svc -n nginx
 ```
 
-### Update the Deployment
+## Step 5: Update Manifests
 
-Modify `manifests/nginx/deployment.yaml` (e.g., change replicas to 3), commit, and push. Observe Fleet automatically applying the changes.
-
-For the Helm example, update the `fleet.yaml` values:
-
-```yaml
-namespace: cert-manager
-helm:
-  chart: cert-manager
-  repo: https://charts.jetstack.io
-  version: v1.13.3
-  releaseName: cert-manager
-  values:
-    installCRDs: true
-    replicaCount: 2  # Add custom values
-```
-
-## Part 5: Test Reconciliation
-
-Delete a resource manually:
+Modify any manifest (e.g., change nginx replicas to 2), commit and push:
 
 ```bash
-kubectl delete deployment nginx -n default
+git add manifests/
+git commit -m "Update nginx replicas"
+git push
 ```
 
-Watch Fleet recreate it:
+Fleet will automatically detect and apply changes.
+
+## Step 6: Test Drift Correction
+
+The nginx bundle has drift correction enabled. Test it by modifying the deployment locally:
 
 ```bash
-kubectl get deployments -n default -w
+kubectl scale deployment nginx -n nginx --replicas=5
+kubectl get deployment nginx -n nginx
 ```
 
-Fleet will detect the drift and reconcile back to the desired state from Git.
+Fleet will detect the drift and automatically restore replicas back to 1 (the desired state in Git).
+
+Alternatively, delete the resource:
+
+```bash
+kubectl delete deployment nginx -n nginx
+kubectl get deployments -n nginx -w
+```
+
+Fleet recreates the resource from Git.
 
 ## Useful Commands
 

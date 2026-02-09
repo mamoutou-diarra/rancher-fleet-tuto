@@ -1,0 +1,3 @@
+defaultNamespace: nginx
+dependsOn:
+  - name: rancher-fleet-tuto-manifests-nginx
