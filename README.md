@@ -4,7 +4,7 @@ A practical guide to managing Kubernetes clusters with Rancher Fleet.
 
 ## Prerequisites
 
-- Kubernetes cluster (v1.21+)
+- Kubernetes cluster
 - `kubectl` and `helm` CLI installed
 - Git repository access
 
