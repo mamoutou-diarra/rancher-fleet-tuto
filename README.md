@@ -26,7 +26,7 @@ Create and apply `gitrepo.yaml`:
 apiVersion: fleet.cattle.io/v1alpha1
 kind: GitRepo
 metadata:
-  name: fleet-tutorial
+  name: rancher-fleet-tuto
   namespace: fleet-local
 spec:
   repo: https://github.com/mamoutou-diarra/rancher-fleet-tuto
