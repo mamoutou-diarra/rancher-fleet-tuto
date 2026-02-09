@@ -1,3 +1,3 @@
 defaultNamespace: nginx
 dependsOn:
-  - name: fleet-tutorial-manifests-nginx
+  - name: rancher-fleet-tuto-manifests-nginx

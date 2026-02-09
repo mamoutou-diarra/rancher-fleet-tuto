@@ -1,2 +1,2 @@
 dependsOn:
-  - name: fleet-tutorial-manifests-cert-manager
+  - name: rancher-fleet-tuto-manifests-cert-manager

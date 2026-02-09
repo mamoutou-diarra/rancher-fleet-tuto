@@ -2,7 +2,14 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: nginx
+annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
+  ingressClassName: traefik
+  tls:
+  - hosts:
+    - nginx.vaclab.diarra.tech
+    secretName: nginx-tls
   rules:
   - host: nginx.vaclab.diarra.tech
     http:
