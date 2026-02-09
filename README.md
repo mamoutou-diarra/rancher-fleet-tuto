@@ -18,7 +18,20 @@ helm install fleet fleet/fleet -n cattle-fleet-system
 kubectl get pods -n cattle-fleet-system
 ```
 
-## Step 2: Create Fleet GitRepo
+## Step 2: Repository Structure
+
+The `manifests/` directory contains Fleet bundles:
+
+- **nginx/** - Nginx deployment (1 replica) with `correctDrift` enabled
+- **nginx-service/** - ClusterIP service for Nginx
+- **nginx-ingress/** - Ingress for nginx
+- **cert-manager/** - Helm chart deployment (cert-manager v1.13.3)
+
+Each directory has a `fleet.yaml` defining deployment configuration.
+
+**Note:** The nginx bundle has `correctDrift: enabled: true` in its `fleet.yaml`, enabling automatic reconciliation when local changes are detected.
+
+## Step 3: Create Fleet GitRepo Object
 
 Create and apply `gitrepo.yaml`:
 
@@ -40,19 +53,6 @@ kubectl apply -f gitrepo.yaml
 kubectl get gitrepo -n fleet-local
 kubectl get bundles -n fleet-local
 ```
-
-## Step 3: Repository Structure
-
-The `manifests/` directory contains Fleet bundles:
-
-- **nginx/** - Nginx deployment (1 replica) with `correctDrift` enabled
-- **nginx-service/** - ClusterIP service for Nginx
-- **nginx-ingress/** - Ingress for nginx
-- **cert-manager/** - Helm chart deployment (cert-manager v1.13.3)
-
-Each directory has a `fleet.yaml` defining deployment configuration.
-
-**Note:** The nginx bundle has `correctDrift: enabled: true` in its `fleet.yaml`, enabling automatic reconciliation when local changes are detected.
 
 ## Step 4: Watch Fleet Sync
 
